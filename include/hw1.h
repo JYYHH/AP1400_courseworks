@@ -12,6 +12,7 @@ using Matrix = std::vector<Vector>;
 namespace algebra{
     Matrix zeros(std::size_t n, std::size_t m);
     Matrix ones(std::size_t n, std::size_t m);
+    Matrix identitys(std::size_t n);
     Matrix random(std::size_t n, std::size_t m, double min, double max);
     void show(const Matrix& matrix);
     Matrix multiply(const Matrix& matrix, double c);

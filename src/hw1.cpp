@@ -7,6 +7,7 @@
 
 namespace algebra{
     int op_time = 0;
+    bool if_neglect_upper_triangular = 0;
     bool is_zero(double x){
         return fabs(x) < 1e-6;
     }
@@ -29,6 +30,12 @@ namespace algebra{
         return Constant(n, m, 1.0);
     }
 
+    Matrix identitys(std::size_t n){
+        Matrix ret = zeros(n, n);
+        for(int i=0;i<n;i++) ret[i][i] += 1.0;
+        return ret;
+    }
+
     Matrix random(std::size_t n, std::size_t m, double min, double max){
         if (min > max)
             throw std::logic_error( "random: min is larger than max" );
@@ -48,7 +55,7 @@ namespace algebra{
     void show(const Matrix& matrix){
         int sz1 = matrix.size(), sz2 = sz1 == 0 ? 0 : matrix[0].size();
         for(int i=0;i<sz1;i++){
-            for(int j=0;j<sz2;j++) std::cout<< std::setw(3) << matrix[i][j];
+            for(int j=0;j<sz2;j++) printf("%.2lf ", matrix[i][j]);
             std::cout << std::endl;
         }
     }
@@ -226,7 +233,7 @@ namespace algebra{
         int i=0, j=0;
         op_time = 0;
 
-        if (n != m)
+        if (n != m && if_neglect_upper_triangular == 0)
             throw std::logic_error( "upper_triangular: row not equals to col" );
 
         while (i<n && j<m){
@@ -264,6 +271,7 @@ namespace algebra{
             return 1.0;
         
         double ret = 1.0;
+        if_neglect_upper_triangular = 0;
         Matrix mid = upper_triangular(matrix);
         for(int i=0;i<n;i++) ret *= mid[i][i];
         if (op_time & 1)
@@ -282,17 +290,39 @@ namespace algebra{
         if (is_zero(det))
             throw std::logic_error( "inverse: det = 0" );
 
-        // method 1: using Minor
-        Matrix ret;
+        // // method 1: using Minor (O(n^5))
+        // Matrix ret;
         
+        // for(int i=0;i<n;i++){
+        //     Vector tmp;
+        //     for(int j=0;j<m;j++)
+        //         if (i+j&1) tmp.pb(-determinant(minor(matrix, i, j)));
+        //         else tmp.pb(determinant(minor(matrix, i, j)));
+        //     ret.pb(tmp);
+        // }
+
+        // return transpose(multiply(ret, 1.0/det));
+
+        // method 2: faster method using concatenate (O(n^3))
+        show(matrix);
+        Matrix ret, mid = concatenate(matrix, identitys(n), 1);
+        if_neglect_upper_triangular = 1;
+        mid = upper_triangular(mid); // get an upper_tri for the left side, and middle state of the right side
+        if_neglect_upper_triangular = 0; // recover
+        // make the left side from upper_tri into Identity
+        show(mid);
+        for(int i=n-1;i>=0;i--){
+            for(int j=i+1;j<m;j++) if(!is_zero(mid[i][j]))
+                Ero_sum(mid, j, -mid[i][j], i);
+            Ero_multiply(mid, i, 1.0/mid[i][i]);
+        }
+        // put the right side matrix as the inverse
+        show(mid);
         for(int i=0;i<n;i++){
             Vector tmp;
-            for(int j=0;j<m;j++)
-                if (i+j&1) tmp.pb(-determinant(minor(matrix, i, j)));
-                else tmp.pb(determinant(minor(matrix, i, j)));
+            for(int j=0;j<m;j++) tmp.pb(mid[i][j+m]);
             ret.pb(tmp);
         }
-
-        return transpose(multiply(ret, 1.0/det));
+        return ret;
     }
 }
